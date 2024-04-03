@@ -22,6 +22,9 @@
 #include "soc/mcpwm_periph.h"
 #include "esp_crt_bundle.h"
 
+#define EXAMPLE_ESP_WIFI_SSID      "VM6193248_2.4GHz"
+#define EXAMPLE_ESP_WIFI_PASS      "bpvoj9gvuuTyfmzv"
+
 #define EXAMPLE_ESP_MAXIMUM_RETRY  CONFIG_ESP_MAXIMUM_RETRY
 
 #if CONFIG_ESP_WPA3_SAE_PWE_HUNT_AND_PECK
@@ -122,8 +125,8 @@ void wifi_init_sta(void)
 
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = getenv("WIFI_SSID"),
-            .password = getenv("WIFI_PASSWORD"),
+            .ssid = EXAMPLE_ESP_WIFI_SSID,
+            .password = EXAMPLE_ESP_WIFI_PASS,
             .threshold.authmode = ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD,
             .sae_pwe_h2e = ESP_WIFI_SAE_MODE,
             .sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
@@ -143,10 +146,10 @@ void wifi_init_sta(void)
 
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
-                 getenv("WIFI_SSID"), getenv("WIFI_PASSWORD"));
+                 EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
     } else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
-                 getenv("WIFI_SSID"), getenv("WIFI_PASSWORD"));
+                 EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
     } else {
         ESP_LOGE(TAG, "UNEXPECTED EVENT");
     }
