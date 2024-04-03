@@ -70,6 +70,8 @@
 
 #define portTICK_RATE_MS 10
 
+#define FIRMWARE_VERSION "1.0.0"
+
 static const char* TAG = "EXIT_MODULE";
 static rc522_handle_t scanner;
 
@@ -168,10 +170,8 @@ static void ghota_event_callback(void* handler_args, esp_event_base_t base, int3
         /* after updating we can remount, but typically the device will reboot shortly after recieving this event. */
        //mount_spiffs();
     } else if (id == GHOTA_EVENT_FIRMWARE_UPDATE_PROGRESS) {
-        /* display some progress with the firmware update */
         ESP_LOGI(TAG, "Firmware Update Progress: %d%%", *((int*) event_data));
     } else if (id == GHOTA_EVENT_STORAGE_UPDATE_PROGRESS) {
-        /* display some progress with the spiffs partition update */
         ESP_LOGI(TAG, "Storage Update Progress: %d%%", *((int*) event_data));
     }
     (void)client;
@@ -361,9 +361,9 @@ void app_main()
     wifi_init_sta();
     
     ghota_config_t ghconfig = {
-        .filenamematch = "esp_ghota-esp32.bin",
-        .storagenamematch = "storage-esp32.bin",
-        .storagepartitionname = "storage",
+        .filenamematch = "exit_module.bin",
+        .orgname = "Trolley-Tech-Support",
+        .reponame = "exit_module",
         /* You should pick something larger than 1 minute practically */
         .updateInterval = 1,
     };

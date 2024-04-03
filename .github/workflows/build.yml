@@ -25,15 +25,13 @@ jobs:
         target: ${{ matrix.targets }}
         path: '.'
     - name: Rename artifact
-      run: |
-        ls -lah 
+      run:
         cp build/exit_module.bin exit_module-${{ matrix.targets }}.bin
     - name: Archive Firmware Files
       uses: actions/upload-artifact@v3
       with: 
         name: ${{ matrix.targets }}-firmware
         path: "*-${{ matrix.targets }}.bin"
-
   release:
     needs: build
     runs-on: ubuntu-latest
