@@ -400,15 +400,13 @@ void app_main()
 
     if (semver_gt(new, cur) == 1) {
         ESP_LOGI(TAG, "New version is greater than current version");
+        ESP_ERROR_CHECK(ghota_update(ghota_client)); 
     } else if (semver_eq(new, cur) == 1) {
         ESP_LOGI(TAG, "New version is equal to current version");
     } else {
         ESP_LOGI(TAG, "New version is less than current version");
-    }
-
-    ESP_ERROR_CHECK(ghota_update(ghota_client));    
+    }   
 #endif
-
 
     servo_initialize();
     rc522_config_t config = {
