@@ -25,7 +25,7 @@ jobs:
         target: ${{ matrix.targets }}
         path: '.'
     - name: Rename artifact
-      run: |
+      run:
         ls -lah 
         cp build/exit_module.bin exit_module-${{ matrix.targets }}.bin
     - name: Archive Firmware Files
