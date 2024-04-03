@@ -13,22 +13,11 @@ jobs:
       matrix: 
         targets: [esp32]
     runs-on: ubuntu-latest
-    env:
-      CLIENT_CERT: ${{ secrets.CLIENT_CERT }}
-      CLIENT_KEY: ${{ secrets.CLIENT_KEY }}
-      WIFI_SSID: ${{ secrets.WIFI_SSID }}
-      WIFI_PASSWORD: ${{ secrets.WIFI_PASSWORD }}
     steps:
     - name: Checkout repo
       uses: actions/checkout@v3
       with:
         submodules: 'recursive'
-    - name: Copy Client Certificate
-      run: |
-        echo "${{ secrets.CLIENT_CERT }}" > client_cert.pem
-    - name: Copy Client Key
-      run: |
-        echo "${{ secrets.CLIENT_KEY }}" > client_key.pem
     - name: esp-idf build
       uses: Fishwaldo/esp-idf-ci-action@v1.1
       with:

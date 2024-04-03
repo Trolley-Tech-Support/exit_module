@@ -14,5 +14,8 @@
     ],
     "idf.portWin": "COM10",
     "idf.pythonBinPathWin": "C:\\Users\\rahul\\.espressif\\python_env\\idf5.1_py3.11_env\\Scripts\\python.exe",
-    "idf.toolsPathWin": "C:\\Users\\rahul\\.espressif"
+    "idf.toolsPathWin": "C:\\Users\\rahul\\.espressif",
+    "files.associations": {
+        "esp_crt_bundle.h": "c"
+    }
 }
