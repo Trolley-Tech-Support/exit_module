@@ -14,6 +14,7 @@
 #include "esp_chip_info.h"
 #include "esp_timer.h"
 #include "esp_flash.h"
+#include "esp_ghota.h"
 #include "nvs_flash.h"
 #include "inttypes.h"
 #include "rc522.h"
@@ -22,8 +23,8 @@
 #include "esp_crt_bundle.h"
 #include "certs.h"
 
-#define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
-#define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
+#define EXAMPLE_ESP_WIFI_SSID      "VM6193248_2.4GHz"
+#define EXAMPLE_ESP_WIFI_PASS      "bpvoj9gvuuTyfmzv"
 
 #define EXAMPLE_ESP_MAXIMUM_RETRY  CONFIG_ESP_MAXIMUM_RETRY
 
@@ -154,6 +155,29 @@ void wifi_init_sta(void)
         ESP_LOGE(TAG, "UNEXPECTED EVENT");
     }
 }
+
+static void ghota_event_callback(void* handler_args, esp_event_base_t base, int32_t id, void* event_data) {
+    ghota_client_handle_t *client = (ghota_client_handle_t *)handler_args;
+    ESP_LOGI(TAG, "Got Update Callback: %s", ghota_get_event_str(id));
+    if (id == GHOTA_EVENT_START_STORAGE_UPDATE) {
+        ESP_LOGI(TAG, "Starting storage update");
+        /* if we are updating the SPIFF storage we should unmount it */
+        //unmount_spiffs();
+    } else if (id == GHOTA_EVENT_FINISH_STORAGE_UPDATE) {
+        ESP_LOGI(TAG, "Ending storage update");
+        /* after updating we can remount, but typically the device will reboot shortly after recieving this event. */
+       //mount_spiffs();
+    } else if (id == GHOTA_EVENT_FIRMWARE_UPDATE_PROGRESS) {
+        /* display some progress with the firmware update */
+        ESP_LOGI(TAG, "Firmware Update Progress: %d%%", *((int*) event_data));
+    } else if (id == GHOTA_EVENT_STORAGE_UPDATE_PROGRESS) {
+        /* display some progress with the spiffs partition update */
+        ESP_LOGI(TAG, "Storage Update Progress: %d%%", *((int*) event_data));
+    }
+    (void)client;
+    return;
+}
+
 
 static bool get_payment_status(uint64_t trolley_id) {
     
@@ -335,6 +359,84 @@ void app_main()
 
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     wifi_init_sta();
+    
+    ghota_config_t ghconfig = {
+        .filenamematch = "esp_ghota-esp32.bin",
+        .storagenamematch = "storage-esp32.bin",
+        .storagepartitionname = "storage",
+        /* 1 minute as a example, but in production you should pick something larger (remember, Github has ratelimites on the API! )*/
+        .updateInterval = 1,
+    };
+
+    /* initialize ghota. */
+    ghota_client_handle_t *ghota_client = ghota_init(&ghconfig);
+    if (ghota_client == NULL) {
+        ESP_LOGE(TAG, "ghota_client_init failed");
+        return;
+    }
+
+    /* register for events relating to the update progress */
+    esp_event_handler_register(GHOTA_EVENTS, ESP_EVENT_ANY_ID, &ghota_event_callback, ghota_client);
+
+#define DO_BACKGROUND_UPDATE 1
+#define DO_FOREGROUND_UPDATE 0
+#define DO_MANUAL_CHECK_UPDATE 0
+
+#ifdef DO_BACKGROUND_UPDATE
+    /* for private repositories or to get more API calls than anonymouse, set a github username and PAT token
+     * see https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token
+     * for more information on how to create a PAT token.
+     * 
+     * Be carefull, as the PAT token will be stored in your firmware etc and can be used to access your github account.
+     */
+    //ESP_ERROR_CHECK(ghota_set_auth(ghota_client, "<Insert GH Username>", "<insert PAT TOKEN>"));
+
+    /* start a timer that will automatically check for updates based on the interval specified above */
+    ESP_ERROR_CHECK(ghota_start_update_timer(ghota_client));
+
+#elif DO_FORGROUND_UPDATE
+    /* or do a check/update now
+     * This runs in a new task under freeRTOS, so you can do other things while it is running.
+     */
+    ESP_ERROR_CHECK(ghota_start_update_task(ghota_client));
+
+#elif DO_MANUAL_CHECK_UPDATE
+    /* Alternatively you can do manual checks 
+     * but note, you probably have to increase the Stack size for the task this runs on
+     */
+
+    /* Query the Github Release API for the latest release */
+    ESP_ERROR_CHECK(ghota_check(ghota_client));
+
+    /* get the semver version of the currently running firmware */
+    semver_t *cur = ghota_get_current_version(ghota_client);
+    if (cur) {
+         ESP_LOGI(TAG, "Current version: %d.%d.%d", cur->major, cur->minor, cur->patch);
+         semver_free(cur);
+    
+
+    /* get the version of the latest release on Github */
+    semver_t *new = ghota_get_latest_version(ghota_client);
+    if (new) {
+        ESP_LOGI(TAG, "New version: %d.%d.%d", new->major, new->minor, new->patch);
+        semver_free(new);
+    }
+
+    /* do some comparisions */
+    if (semver_gt(new, cur) == 1) {
+        ESP_LOGI(TAG, "New version is greater than current version");
+    } else if (semver_eq(new, cur) == 1) {
+        ESP_LOGI(TAG, "New version is equal to current version");
+    } else {
+        ESP_LOGI(TAG, "New version is less than current version");
+    }
+
+    /* assuming we have a new version, then do a actual update */
+    ESP_ERROR_CHECK(ghota_update(ghota_client));
+    /* if there was a new version installed, the esp will reboot after installation and will not reach this code */    
+    
+#endif
+
     servo_initialize();
     rc522_config_t config = {
         .spi.host = VSPI_HOST,
