@@ -163,11 +163,11 @@ static void ghota_event_callback(void* handler_args, esp_event_base_t base, int3
     ESP_LOGI(TAG, "Got Update Callback: %s", ghota_get_event_str(id));
     if (id == GHOTA_EVENT_START_STORAGE_UPDATE) {
         ESP_LOGI(TAG, "Starting storage update");
-        /* if we are updating the SPIFF storage we should unmount it */
+        /*If we are updating the SPIFF storage we should unmount it.*/
         //unmount_spiffs();
     } else if (id == GHOTA_EVENT_FINISH_STORAGE_UPDATE) {
         ESP_LOGI(TAG, "Ending storage update");
-        /* after updating we can remount, but typically the device will reboot shortly after recieving this event. */
+        /*After updating we can remount, but typically the device will reboot shortly after recieving this event.*/
        //mount_spiffs();
     } else if (id == GHOTA_EVENT_FIRMWARE_UPDATE_PROGRESS) {
         ESP_LOGI(TAG, "Firmware Update Progress: %d%%", *((int*) event_data));
