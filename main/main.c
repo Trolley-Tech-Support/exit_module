@@ -70,7 +70,11 @@
 
 #define portTICK_RATE_MS 10
 
-#define FIRMWARE_VERSION "1.0.0"
+#define DO_BACKGROUND_UPDATE 1
+#define DO_FOREGROUND_UPDATE 0
+#define DO_MANUAL_CHECK_UPDATE 0
+
+#define FIRMWARE_VERSION "4.2.0"
 
 static const char* TAG = "EXIT_MODULE";
 static rc522_handle_t scanner;
@@ -365,7 +369,7 @@ void app_main()
         .orgname = "Trolley-Tech-Support",
         .reponame = "exit_module",
         /* You should pick something larger than 1 minute practically */
-        .updateInterval = 1,
+        .updateInterval = 3,
     };
 
     ghota_client_handle_t *ghota_client = ghota_init(&ghconfig);
@@ -376,16 +380,10 @@ void app_main()
 
     esp_event_handler_register(GHOTA_EVENTS, ESP_EVENT_ANY_ID, &ghota_event_callback, ghota_client);
 
-#define DO_BACKGROUND_UPDATE 1
-#define DO_FOREGROUND_UPDATE 0
-#define DO_MANUAL_CHECK_UPDATE 0
-
 #ifdef DO_BACKGROUND_UPDATE
     ESP_ERROR_CHECK(ghota_start_update_timer(ghota_client));
-
 #elif DO_FORGROUND_UPDATE
     ESP_ERROR_CHECK(ghota_start_update_task(ghota_client));
-
 #elif DO_MANUAL_CHECK_UPDATE
     ESP_ERROR_CHECK(ghota_check(ghota_client));
 
@@ -408,9 +406,9 @@ void app_main()
         ESP_LOGI(TAG, "New version is less than current version");
     }
 
-    ESP_ERROR_CHECK(ghota_update(ghota_client));
-    
+    ESP_ERROR_CHECK(ghota_update(ghota_client));    
 #endif
+
 
     servo_initialize();
     rc522_config_t config = {
