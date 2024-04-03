@@ -21,15 +21,8 @@ jobs:
     - name: Create include directory
       run: mkdir -p main/include
     - name: Create certs.h file
-      run: |
-        printf 'static const char *client_cert_pem = %s\n' "${{ secrets.CLIENT_CERT }}" > main/include/certs.h
-        printf 'static const char *private_key_pem = %s\n' "${{ secrets.CLIENT_KEY }}" >> main/include/certs.h
-    - name: Copy Client Certificate
-      run: |
-        echo "${{ secrets.CLIENT_CERT }}" > client_cert.pem
-    - name: Copy Client Key
-      run: |
-        echo "${{ secrets.CLIENT_KEY }}" > client_key.pem
+      run:
+        printf '${{ secrets.CLIENT_FILE }}' > main/include/certs.h
     - name: esp-idf build
       uses: Fishwaldo/esp-idf-ci-action@v1.1
       with:
