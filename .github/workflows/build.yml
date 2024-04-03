@@ -1,0 +1,52 @@
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+name: Build
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix: 
+        targets: [esp32]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - name: esp-idf build
+      uses: Fishwaldo/esp-idf-ci-action@v1.1
+      with:
+        esp_idf_version: v5.1.2
+        target: ${{ matrix.targets }}
+        path: '.'
+    - name: Rename artifact
+      run: |
+        ls -lah 
+        cp build/exit_module.bin exit_module-${{ matrix.targets }}.bin
+    - name: Archive Firmware Files
+      uses: actions/upload-artifact@v3
+      with: 
+        name: ${{ matrix.targets }}-firmware
+        path: "*-${{ matrix.targets }}.bin"
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download Firmware Files
+      uses: actions/download-artifact@v2
+      with:
+        path: release
+    - name: Release Firmware
+      uses: ncipollo/release-action@v1
+      if: startsWith(github.ref, 'refs/tags/') 
+      with:
+        artifacts: release/*/*.bin
+        generateReleaseNotes: true
+        allowUpdates: true
+        token: ${{ secrets.GITHUB_TOKEN }}
