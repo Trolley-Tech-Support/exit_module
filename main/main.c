@@ -21,10 +21,9 @@
 #include "cJSON.h"
 #include "soc/mcpwm_periph.h"
 #include "esp_crt_bundle.h"
-#include "certs.h"
 
-#define EXAMPLE_ESP_WIFI_SSID      "VM6193248_2.4GHz"
-#define EXAMPLE_ESP_WIFI_PASS      "bpvoj9gvuuTyfmzv"
+#define EXAMPLE_ESP_WIFI_SSID      getenv("WIFI_SSID")
+#define EXAMPLE_ESP_WIFI_PASS      getenv("WIFI_PASSWORD")
 
 #define EXAMPLE_ESP_MAXIMUM_RETRY  CONFIG_ESP_MAXIMUM_RETRY
 
@@ -197,8 +196,8 @@ static bool get_payment_status(uint64_t trolley_id) {
         .url = url,
         .method = HTTP_METHOD_GET,
         .auth_type = HTTP_AUTH_TYPE_BASIC,
-        .client_cert_pem = client_cert_pem,
-        .client_key_pem = private_key_pem,
+        .client_cert_pem = getenv("CLIENT_CERT"),
+        .client_key_pem = getenv("CLIENT_KEY"),
        .transport_type = HTTP_TRANSPORT_OVER_SSL,
        .crt_bundle_attach = esp_crt_bundle_attach,
     };
@@ -259,8 +258,8 @@ static bool set_payment_status(uint64_t trolley_id) {
         .url = url,
         .method = HTTP_METHOD_GET,
         .auth_type = HTTP_AUTH_TYPE_BASIC,
-        .client_cert_pem = client_cert_pem,
-        .client_key_pem = private_key_pem,
+        .client_cert_pem = getenv("CLIENT_CERT"),
+        .client_key_pem = getenv("CLIENT_KEY"),
        .transport_type = HTTP_TRANSPORT_OVER_SSL,
        .crt_bundle_attach = esp_crt_bundle_attach,
     };
