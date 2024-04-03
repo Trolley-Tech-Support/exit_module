@@ -363,18 +363,16 @@ void app_main()
         .filenamematch = "esp_ghota-esp32.bin",
         .storagenamematch = "storage-esp32.bin",
         .storagepartitionname = "storage",
-        /* 1 minute as a example, but in production you should pick something larger (remember, Github has ratelimites on the API! )*/
+        /* You should pick something larger than 1 minute practically */
         .updateInterval = 1,
     };
 
-    /* initialize ghota. */
     ghota_client_handle_t *ghota_client = ghota_init(&ghconfig);
     if (ghota_client == NULL) {
         ESP_LOGE(TAG, "ghota_client_init failed");
         return;
     }
 
-    /* register for events relating to the update progress */
     esp_event_handler_register(GHOTA_EVENTS, ESP_EVENT_ANY_ID, &ghota_event_callback, ghota_client);
 
 #define DO_BACKGROUND_UPDATE 1
@@ -382,46 +380,25 @@ void app_main()
 #define DO_MANUAL_CHECK_UPDATE 0
 
 #ifdef DO_BACKGROUND_UPDATE
-    /* for private repositories or to get more API calls than anonymouse, set a github username and PAT token
-     * see https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token
-     * for more information on how to create a PAT token.
-     * 
-     * Be carefull, as the PAT token will be stored in your firmware etc and can be used to access your github account.
-     */
-    //ESP_ERROR_CHECK(ghota_set_auth(ghota_client, "<Insert GH Username>", "<insert PAT TOKEN>"));
-
-    /* start a timer that will automatically check for updates based on the interval specified above */
     ESP_ERROR_CHECK(ghota_start_update_timer(ghota_client));
 
 #elif DO_FORGROUND_UPDATE
-    /* or do a check/update now
-     * This runs in a new task under freeRTOS, so you can do other things while it is running.
-     */
     ESP_ERROR_CHECK(ghota_start_update_task(ghota_client));
 
 #elif DO_MANUAL_CHECK_UPDATE
-    /* Alternatively you can do manual checks 
-     * but note, you probably have to increase the Stack size for the task this runs on
-     */
-
-    /* Query the Github Release API for the latest release */
     ESP_ERROR_CHECK(ghota_check(ghota_client));
 
-    /* get the semver version of the currently running firmware */
     semver_t *cur = ghota_get_current_version(ghota_client);
     if (cur) {
          ESP_LOGI(TAG, "Current version: %d.%d.%d", cur->major, cur->minor, cur->patch);
          semver_free(cur);
     
-
-    /* get the version of the latest release on Github */
     semver_t *new = ghota_get_latest_version(ghota_client);
     if (new) {
         ESP_LOGI(TAG, "New version: %d.%d.%d", new->major, new->minor, new->patch);
         semver_free(new);
     }
 
-    /* do some comparisions */
     if (semver_gt(new, cur) == 1) {
         ESP_LOGI(TAG, "New version is greater than current version");
     } else if (semver_eq(new, cur) == 1) {
@@ -430,9 +407,7 @@ void app_main()
         ESP_LOGI(TAG, "New version is less than current version");
     }
 
-    /* assuming we have a new version, then do a actual update */
     ESP_ERROR_CHECK(ghota_update(ghota_client));
-    /* if there was a new version installed, the esp will reboot after installation and will not reach this code */    
     
 #endif
 
