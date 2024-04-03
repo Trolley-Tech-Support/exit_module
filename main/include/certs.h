@@ -1,4 +1,3 @@
-
 static const char *client_cert_pem =
     "-----BEGIN CERTIFICATE-----\n"
     "MIIEcTCCAlkCAQEwDQYJKoZIhvcNAQELBQAwfjELMAkGA1UEBhMCaWUxDzANBgNV\n"
@@ -26,6 +25,7 @@ static const char *client_cert_pem =
     "DOF1s7wpV1ACX19QkRXWD9Tz38E0GTmtrgQEAohcMUCuA1hMLWY1QkPdV7vTAu8m\n"
     "uu+o4DDYMT3EA37UFnk0d26olfro20eqrynZcSfYWgPwByfNCg==\n"
     "-----END CERTIFICATE-----";
+
 
 static const char *private_key_pem =
     "-----BEGIN PRIVATE KEY-----\n"
