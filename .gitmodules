@@ -1,0 +1,7 @@
+[submodule "components/esp-idf-rc522"]
+    path = components/esp-idf-rc522
+    url = https://github.com/abobija/esp-idf-rc522.git
+
+[submodule "components/esp_ghota"]
+    path = components/esp_ghota
+    url = https://github.com/Fishwaldo/esp_ghota.git
