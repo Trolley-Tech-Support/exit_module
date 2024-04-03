@@ -361,7 +361,7 @@ void app_main()
     wifi_init_sta();
     
     ghota_config_t ghconfig = {
-        .filenamematch = "exit_module.bin",
+        .filenamematch = "exit_module-esp32.bin",
         .orgname = "Trolley-Tech-Support",
         .reponame = "exit_module",
         /* You should pick something larger than 1 minute practically */
