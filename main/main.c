@@ -229,7 +229,7 @@ static bool get_payment_status(uint64_t trolley_id) {
 
     int data_read = esp_http_client_read_response(client, output_buffer, MAX_HTTP_OUTPUT_BUFFER);
     if (data_read >= 0) {
-        //ESP_LOGI(TAG, "GET Response Received: %s", output_buffer);
+        //ESP_LOGI(TAG, " GET Response Received: %s", output_buffer);
         cJSON *json = cJSON_Parse(output_buffer);
         if (json != NULL) {
             cJSON *payment_status_json = cJSON_GetObjectItem(json, "payment_status");
