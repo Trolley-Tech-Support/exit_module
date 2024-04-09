@@ -437,13 +437,11 @@ void advanced_ota_task(void *pvParameter)
         ESP_ERROR_CHECK(ghota_check(ghota_client));
         semver_t *cur = ghota_get_current_version(ghota_client);
         if (cur) {
-            //ESP_LOGI(TAG, "Current version: %d.%d.%d", cur->major, cur->minor, cur->patch);
             semver_free(cur);
         }
     
         semver_t *new = ghota_get_latest_version(ghota_client);
         if (new) {
-            //ESP_LOGI(TAG, "New version: %d.%d.%d", new->major, new->minor, new->patch);
             semver_free(new);
         }
 
