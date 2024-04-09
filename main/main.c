@@ -446,17 +446,7 @@ void advanced_ota_task(void *pvParameter)
             //ESP_LOGI(TAG, "New version: %d.%d.%d", new->major, new->minor, new->patch);
             semver_free(new);
         }
-        
-        if(new->patch > 0){
-            new->patch -=1;
-        } else {
-            if(new->minor > 0){
-                new->minor -=1;
-            } else {
-                new->major -=1;
-            }
-        }
-        
+
         if (semver_gt(*new, *cur) == 1) {
             ESP_LOGI(TAG, "New version is greater than current version");
         } else if (semver_eq(*new, *cur) == 1) {
