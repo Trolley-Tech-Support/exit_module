@@ -437,14 +437,26 @@ void advanced_ota_task(void *pvParameter)
         ESP_ERROR_CHECK(ghota_check(ghota_client));
         semver_t *cur = ghota_get_current_version(ghota_client);
         if (cur) {
+            //ESP_LOGI(TAG, "Current version: %d.%d.%d", cur->major, cur->minor, cur->patch);
             semver_free(cur);
         }
     
         semver_t *new = ghota_get_latest_version(ghota_client);
         if (new) {
+            //ESP_LOGI(TAG, "New version: %d.%d.%d", new->major, new->minor, new->patch);
             semver_free(new);
         }
-
+        
+        if(new->patch > 0){
+            new->patch -=1;
+        } else {
+            if(new->minor > 0){
+                new->minor -=1;
+            } else {
+                new->major -=1;
+            }
+        }
+        
         if (semver_gt(*new, *cur) == 1) {
             ESP_LOGI(TAG, "New version is greater than current version");
         } else if (semver_eq(*new, *cur) == 1) {
@@ -474,6 +486,7 @@ void advanced_ota_task(void *pvParameter)
             }
 
             if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
+                // the OTA image was not completely received and user can customise the response to this situation.
                 ESP_LOGW(TAG, "Complete data was not received.");
             } else {
                 ota_finish_err = esp_https_ota_finish(https_ota_handle);
