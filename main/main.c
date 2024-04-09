@@ -485,9 +485,9 @@ void advanced_ota_task(void *pvParameter)
         }
         ota_end:
             esp_https_ota_abort(https_ota_handle);
-            ESP_LOGE(TAG, "ESP_HTTPS_OTA upgrade failed");
+            ESP_LOGI(TAG, "ESP_HTTPS_OTA update not done !");
             vTaskDelete(NULL);
-        vTaskDelay(4000 / portTICK_PERIOD_MS);
+        vTaskDelay(30000 / portTICK_PERIOD_MS);
     }
 }
 
