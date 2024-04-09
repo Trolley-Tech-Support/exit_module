@@ -22,6 +22,8 @@
 #include "soc/mcpwm_periph.h"
 #include "esp_crt_bundle.h"
 #include "certs.h"
+#include "esp_ota_ops.h"
+#include "esp_https_ota.h"
 
 #define EXAMPLE_ESP_WIFI_SSID      "VM6193248_2.4GHz"
 #define EXAMPLE_ESP_WIFI_PASS      "bpvoj9gvuuTyfmzv"
@@ -160,27 +162,6 @@ void wifi_init_sta(void)
         ESP_LOGE(TAG, "UNEXPECTED EVENT");
     }
 }
-
-static void ghota_event_callback(void* handler_args, esp_event_base_t base, int32_t id, void* event_data) {
-    ghota_client_handle_t *client = (ghota_client_handle_t *)handler_args;
-    ESP_LOGI(TAG, "Got Update Callback: %s", ghota_get_event_str(id));
-    if (id == GHOTA_EVENT_START_STORAGE_UPDATE) {
-        ESP_LOGI(TAG, "Starting storage update");
-        /*If we are updating the SPIFF storage we should unmount it.*/
-        //unmount_spiffs();
-    } else if (id == GHOTA_EVENT_FINISH_STORAGE_UPDATE) {
-        ESP_LOGI(TAG, "Ending storage update");
-        /*After updating we can remount, but typically the device will reboot shortly after recieving this event.*/
-       //mount_spiffs();
-    } else if (id == GHOTA_EVENT_FIRMWARE_UPDATE_PROGRESS) {
-        ESP_LOGI(TAG, "Firmware Update Progress: %d%%", *((int*) event_data));
-    } else if (id == GHOTA_EVENT_STORAGE_UPDATE_PROGRESS) {
-        ESP_LOGI(TAG, "Storage Update Progress: %d%%", *((int*) event_data));
-    }
-    (void)client;
-    return;
-}
-
 
 static bool get_payment_status(uint64_t trolley_id) {
     
@@ -345,9 +326,168 @@ static void rc522_handler(void* arg, esp_event_base_t base, int32_t event_id, vo
                         close_gate();
                         vTaskDelay(2000 / portTICK_RATE_MS);
                     }
+                } else {
+                    ESP_LOGI(TAG, "Check Payment at your end !");
+                    ESP_LOGI(TAG, "Payment in not Complete State in Server !");
                 }
             }
             break;
+    }
+}
+
+static esp_err_t validate_image_header(esp_app_desc_t *new_app_info)
+{
+    if (new_app_info == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_app_desc_t running_app_info;
+    if (esp_ota_get_partition_description(running, &running_app_info) == ESP_OK) {
+        ESP_LOGI(TAG, "Running firmware version: %s", running_app_info.version);
+    }
+
+#ifndef CONFIG_EXAMPLE_SKIP_VERSION_CHECK
+    if (memcmp(new_app_info->version, running_app_info.version, sizeof(new_app_info->version)) == 0) {
+        ESP_LOGW(TAG, "Current running version is the same as a new. We will not continue the update.");
+        return ESP_FAIL;
+    }
+#endif
+
+#ifdef CONFIG_BOOTLOADER_APP_ANTI_ROLLBACK
+    /**
+     * Secure version check from firmware image header prevents subsequent download and flash write of
+     * entire firmware image. However this is optional because it is also taken care in API
+     * esp_https_ota_finish at the end of OTA update procedure.
+     */
+    const uint32_t hw_sec_version = esp_efuse_read_secure_version();
+    if (new_app_info->secure_version < hw_sec_version) {
+        ESP_LOGW(TAG, "New firmware security version is less than eFuse programmed, %"PRIu32" < %"PRIu32, new_app_info->secure_version, hw_sec_version);
+        return ESP_FAIL;
+    }
+#endif
+
+    return ESP_OK;
+}
+
+static esp_err_t _http_client_init_cb(esp_http_client_handle_t http_client)
+{
+    esp_err_t err = ESP_OK;
+    return err;
+}
+
+void advanced_ota_task(void *pvParameter)
+{
+    while(1) {
+
+        ghota_config_t ghconfig = {
+            .filenamematch = "exit_module-esp32.bin",
+            .orgname = "Trolley-Tech-Support",
+            .reponame = "exit_module",
+            /* You should pick something larger than 1 minute practically */
+            .updateInterval = 1,
+        };
+
+        ghota_client_handle_t *ghota_client = ghota_init(&ghconfig);
+        if (ghota_client == NULL) {
+            ESP_LOGE(TAG, "ghota_client_init failed");
+            return;
+        }
+
+        esp_err_t ota_finish_err = ESP_OK;
+
+        esp_http_client_config_t config = {
+            .url = "https://iot.api.pastav.com/esp/update",
+            .method = HTTP_METHOD_GET,
+            .auth_type = HTTP_AUTH_TYPE_BASIC,
+            .client_cert_pem = client_cert_pem,
+            .client_key_pem = private_key_pem,
+            .transport_type = HTTP_TRANSPORT_OVER_SSL,
+            .crt_bundle_attach = esp_crt_bundle_attach,
+        };
+
+        esp_https_ota_config_t ota_config = {
+            .http_config = &config,
+            .http_client_init_cb = _http_client_init_cb,
+        };
+
+        esp_https_ota_handle_t https_ota_handle = NULL;
+        esp_err_t err = esp_https_ota_begin(&ota_config, &https_ota_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "ESP HTTPS OTA Begin failed");
+            vTaskDelete(NULL);
+        }
+
+        esp_app_desc_t app_desc;
+        err = esp_https_ota_get_img_desc(https_ota_handle, &app_desc);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "esp_https_ota_get_img_desc failed");
+            goto ota_end;
+        }
+
+        err = validate_image_header(&app_desc);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "image header verification failed");
+            goto ota_end;
+        }
+
+        ESP_ERROR_CHECK(ghota_check(ghota_client));
+        semver_t *cur = ghota_get_current_version(ghota_client);
+        if (cur) {
+            ESP_LOGI(TAG, "Current version: %d.%d.%d", cur->major, cur->minor, cur->patch);
+            semver_free(cur);
+        }
+    
+        semver_t *new = ghota_get_latest_version(ghota_client);
+        if (new) {
+            ESP_LOGI(TAG, "New version: %d.%d.%d", new->major, new->minor, new->patch);
+            semver_free(new);
+        }
+
+        if (semver_gt(*new, *cur) == 1) {
+            ESP_LOGI(TAG, "New version is greater than current version");
+        } else if (semver_eq(*new, *cur) == 1) {
+            ESP_LOGI(TAG, "New version is equal to current version");
+        } else {
+            ESP_LOGI(TAG, "New version is less than current version");
+        }
+
+        if (semver_gt(*new, *cur) == 1) {
+            while(1) {
+                err = esp_https_ota_perform(https_ota_handle);
+                if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
+                    break;
+                }
+                // esp_https_ota_perform returns after every read operation which gives user the ability to
+                // monitor the status of OTA upgrade by calling esp_https_ota_get_image_len_read, which gives length of image
+                // data read so far.
+                ESP_LOGD(TAG, "Image bytes read: %d", esp_https_ota_get_image_len_read(https_ota_handle));
+            }
+
+            if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
+                // the OTA image was not completely received and user can customise the response to this situation.
+                ESP_LOGE(TAG, "Complete data was not received.");
+            } else {
+                ota_finish_err = esp_https_ota_finish(https_ota_handle);
+                if ((err == ESP_OK) && (ota_finish_err == ESP_OK)) {
+                    ESP_LOGI(TAG, "ESP_HTTPS_OTA upgrade successful. Rebooting ...");
+                    vTaskDelay(1000 / portTICK_PERIOD_MS);
+                    esp_restart();
+                } else {
+                    if (ota_finish_err == ESP_ERR_OTA_VALIDATE_FAILED) {
+                        ESP_LOGE(TAG, "Image validation failed, image is corrupted");
+                    }
+                    ESP_LOGE(TAG, "ESP_HTTPS_OTA upgrade failed 0x%x", ota_finish_err);
+                    vTaskDelete(NULL);
+                }
+            }
+        
+        }
+        ota_end:
+            esp_https_ota_abort(https_ota_handle);
+            ESP_LOGE(TAG, "ESP_HTTPS_OTA upgrade failed");
+            vTaskDelete(NULL);
+        vTaskDelay(4000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -362,50 +502,9 @@ void app_main()
 
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     wifi_init_sta();
-    
-    ghota_config_t ghconfig = {
-        .filenamematch = "exit_module-esp32.bin",
-        .orgname = "Trolley-Tech-Support",
-        .reponame = "exit_module",
-        /* You should pick something larger than 1 minute practically */
-        .updateInterval = 3,
-    };
 
-    ghota_client_handle_t *ghota_client = ghota_init(&ghconfig);
-    if (ghota_client == NULL) {
-        ESP_LOGE(TAG, "ghota_client_init failed");
-        return;
-    }
-
-    esp_event_handler_register(GHOTA_EVENTS, ESP_EVENT_ANY_ID, &ghota_event_callback, ghota_client);
-
-#ifdef DO_BACKGROUND_UPDATE
-    ESP_ERROR_CHECK(ghota_start_update_timer(ghota_client));
-#elif DO_FORGROUND_UPDATE
-    ESP_ERROR_CHECK(ghota_start_update_task(ghota_client));
-#elif DO_MANUAL_CHECK_UPDATE
-    ESP_ERROR_CHECK(ghota_check(ghota_client));
-
-    semver_t *cur = ghota_get_current_version(ghota_client);
-    if (cur) {
-         ESP_LOGI(TAG, "Current version: %d.%d.%d", cur->major, cur->minor, cur->patch);
-         semver_free(cur);
-    
-    semver_t *new = ghota_get_latest_version(ghota_client);
-    if (new) {
-        ESP_LOGI(TAG, "New version: %d.%d.%d", new->major, new->minor, new->patch);
-        semver_free(new);
-    }
-
-    if (semver_gt(new, cur) == 1) {
-        ESP_LOGI(TAG, "New version is greater than current version");
-        ESP_ERROR_CHECK(ghota_update(ghota_client)); 
-    } else if (semver_eq(new, cur) == 1) {
-        ESP_LOGI(TAG, "New version is equal to current version");
-    } else {
-        ESP_LOGI(TAG, "New version is less than current version");
-    }   
-#endif
+    ESP_ERROR_CHECK(esp_event_handler_register(ESP_HTTPS_OTA_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+    xTaskCreate(&advanced_ota_task, "advanced_ota_task", 1024 * 8, NULL, 5, NULL);
 
     servo_initialize();
     rc522_config_t config = {
