@@ -390,7 +390,7 @@ void advanced_ota_task(void *pvParameter)
 
         ghota_client_handle_t *ghota_client = ghota_init(&ghconfig);
         if (ghota_client == NULL) {
-            ESP_LOGE(TAG, "ghota_client_init failed");
+            ESP_LOGW(TAG, "ghota_client_init failed");
             return;
         }
 
@@ -414,20 +414,20 @@ void advanced_ota_task(void *pvParameter)
         esp_https_ota_handle_t https_ota_handle = NULL;
         esp_err_t err = esp_https_ota_begin(&ota_config, &https_ota_handle);
         if (err != ESP_OK) {
-            ESP_LOGE(TAG, "ESP HTTPS OTA Begin failed");
+            ESP_LOGW(TAG, "ESP HTTPS OTA Begin failed");
             vTaskDelete(NULL);
         }
 
         esp_app_desc_t app_desc;
         err = esp_https_ota_get_img_desc(https_ota_handle, &app_desc);
         if (err != ESP_OK) {
-            ESP_LOGE(TAG, "esp_https_ota_get_img_desc failed");
+            ESP_LOGW(TAG, "esp_https_ota_get_img_desc failed");
             goto ota_end;
         }
 
         err = validate_image_header(&app_desc);
         if (err != ESP_OK) {
-            ESP_LOGE(TAG, "image header verification failed");
+            ESP_LOGW(TAG, "image header verification failed");
             goto ota_end;
         }
 
@@ -466,7 +466,7 @@ void advanced_ota_task(void *pvParameter)
 
             if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
                 // the OTA image was not completely received and user can customise the response to this situation.
-                ESP_LOGE(TAG, "Complete data was not received.");
+                ESP_LOGW(TAG, "Complete data was not received.");
             } else {
                 ota_finish_err = esp_https_ota_finish(https_ota_handle);
                 if ((err == ESP_OK) && (ota_finish_err == ESP_OK)) {
@@ -475,9 +475,9 @@ void advanced_ota_task(void *pvParameter)
                     esp_restart();
                 } else {
                     if (ota_finish_err == ESP_ERR_OTA_VALIDATE_FAILED) {
-                        ESP_LOGE(TAG, "Image validation failed, image is corrupted");
+                        ESP_LOGW(TAG, "Image validation failed, image is corrupted");
                     }
-                    ESP_LOGE(TAG, "ESP_HTTPS_OTA upgrade failed 0x%x", ota_finish_err);
+                    ESP_LOGW(TAG, "ESP_HTTPS_OTA upgrade failed 0x%x", ota_finish_err);
                     vTaskDelete(NULL);
                 }
             }
