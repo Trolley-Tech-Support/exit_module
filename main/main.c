@@ -337,19 +337,35 @@ static void rc522_handler(void* arg, esp_event_base_t base, int32_t event_id, vo
 
 static esp_err_t validate_image_header(esp_app_desc_t *new_app_info)
 {
-    if (new_app_info == NULL) {
+    if (new_app_info == NULL)
+    {
         return ESP_ERR_INVALID_ARG;
     }
+    ESP_LOGI(TAG, "New Firmware Details:");
+    ESP_LOGI(TAG, "Project name: %s", new_app_info->project_name);
+    ESP_LOGI(TAG, "Firmware version: %s", new_app_info->version);
+    ESP_LOGI(TAG, "Compiled time: %s %s", new_app_info->date, new_app_info->time);
+    ESP_LOGI(TAG, "ESP-IDF: %s", new_app_info->idf_ver);
+    ESP_LOGI(TAG, "SHA256:");
+    ESP_LOG_BUFFER_HEX(TAG, new_app_info->app_elf_sha256, sizeof(new_app_info->app_elf_sha256));
 
     const esp_partition_t *running = esp_ota_get_running_partition();
-    esp_app_desc_t running_app_info;
-    if (esp_ota_get_partition_description(running, &running_app_info) == ESP_OK) {
-        ESP_LOGI(TAG, "Running firmware version: %s", running_app_info.version);
-    }
+    ESP_LOGD(TAG, "Current partition %s type %d subtype %d (offset 0x%08" PRIx32 ")",
+             running->label, running->type, running->subtype, running->address);
+    const esp_partition_t *update = esp_ota_get_next_update_partition(NULL);
+    ESP_LOGD(TAG, "Update partition %s type %d subtype %d (offset 0x%08" PRIx32 ")",
+             update->label, update->type, update->subtype, update->address);
 
-#ifndef CONFIG_EXAMPLE_SKIP_VERSION_CHECK
-    if (memcmp(new_app_info->version, running_app_info.version, sizeof(new_app_info->version)) == 0) {
-        ESP_LOGW(TAG, "Current running version is the same as a new. We will not continue the update.");
+#ifdef CONFIG_BOOTLOADER_APP_ANTI_ROLLBACK
+    /**
+     * Secure version check from firmware image header prevents subsequent download and flash write of
+     * entire firmware image. However this is optional because it is also taken care in API
+     * esp_https_ota_finish at the end of OTA update procedure.
+     */
+    const uint32_t hw_sec_version = esp_efuse_read_secure_version();
+    if (new_app_info->secure_version < hw_sec_version)
+    {
+        ESP_LOGW(TAG, "New firmware security version is less than eFuse programmed, %d < %d", new_app_info->secure_version, hw_sec_version);
         return ESP_FAIL;
     }
 #endif
@@ -440,15 +456,23 @@ void advanced_ota_task(void *pvParameter)
         }
 
         if (semver_gt(*new, *cur) == 1) {
-            while(1) {
+            int last_progress = -1;
+            while (1)
+            {
                 err = esp_https_ota_perform(https_ota_handle);
-                if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
+                if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS)
+                {
                     break;
                 }
-                // esp_https_ota_perform returns after every read operation which gives user the ability to
-                // monitor the status of OTA upgrade by calling esp_https_ota_get_image_len_read, which gives length of image
-                // data read so far.
-                ESP_LOGD(TAG, "Image bytes read: %d", esp_https_ota_get_image_len_read(https_ota_handle));
+                int32_t dl = esp_https_ota_get_image_len_read(https_ota_handle);
+                int32_t size = esp_https_ota_get_image_size(https_ota_handle);
+                int progress = 100 * ((float)dl / (float)size);
+                if ((progress % 5 == 0) && (progress != last_progress))
+                {
+                    ESP_ERROR_CHECK(esp_event_post(GHOTA_EVENTS, GHOTA_EVENT_FIRMWARE_UPDATE_PROGRESS, &progress, sizeof(progress), portMAX_DELAY));
+                    ESP_LOGV(TAG, "Firmware Update Progress: %d%%", progress);
+                    last_progress = progress;
+                }
             }
 
             if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
@@ -465,7 +489,6 @@ void advanced_ota_task(void *pvParameter)
                         ESP_LOGW(TAG, "Image validation failed, image is corrupted");
                     }
                     ESP_LOGW(TAG, "ESP_HTTPS_OTA upgrade failed 0x%x", ota_finish_err);
-                    vTaskDelete(NULL);
                 }
             }
         
