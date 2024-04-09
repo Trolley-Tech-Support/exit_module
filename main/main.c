@@ -354,19 +354,6 @@ static esp_err_t validate_image_header(esp_app_desc_t *new_app_info)
     }
 #endif
 
-#ifdef CONFIG_BOOTLOADER_APP_ANTI_ROLLBACK
-    /**
-     * Secure version check from firmware image header prevents subsequent download and flash write of
-     * entire firmware image. However this is optional because it is also taken care in API
-     * esp_https_ota_finish at the end of OTA update procedure.
-     */
-    const uint32_t hw_sec_version = esp_efuse_read_secure_version();
-    if (new_app_info->secure_version < hw_sec_version) {
-        ESP_LOGW(TAG, "New firmware security version is less than eFuse programmed, %"PRIu32" < %"PRIu32, new_app_info->secure_version, hw_sec_version);
-        return ESP_FAIL;
-    }
-#endif
-
     return ESP_OK;
 }
 
