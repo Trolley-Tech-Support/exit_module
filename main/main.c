@@ -474,7 +474,6 @@ void advanced_ota_task(void *pvParameter)
             }
 
             if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
-                // the OTA image was not completely received and user can customise the response to this situation.
                 ESP_LOGW(TAG, "Complete data was not received.");
             } else {
                 ota_finish_err = esp_https_ota_finish(https_ota_handle);
