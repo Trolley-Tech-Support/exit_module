@@ -491,7 +491,6 @@ void advanced_ota_task(void *pvParameter)
                     ESP_LOGW(TAG, "ESP_HTTPS_OTA upgrade failed 0x%x", ota_finish_err);
                 }
             }
-        
         }
         ota_end:
             esp_https_ota_abort(https_ota_handle);
