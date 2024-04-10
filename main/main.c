@@ -25,8 +25,11 @@
 #include "esp_ota_ops.h"
 #include "esp_https_ota.h"
 
-#define EXAMPLE_ESP_WIFI_SSID      "VM6193248_2.4GHz"
-#define EXAMPLE_ESP_WIFI_PASS      "bpvoj9gvuuTyfmzv"
+//#define EXAMPLE_ESP_WIFI_SSID      "VM6193248_2.4GHz"
+//#define EXAMPLE_ESP_WIFI_PASS      "bpvoj9gvuuTyfmzv"
+#define EXAMPLE_ESP_WIFI_SSID      "Phone"
+#define EXAMPLE_ESP_WIFI_PASS      "pokemon1"
+
 #define EXAMPLE_ESP_MAXIMUM_RETRY  CONFIG_ESP_MAXIMUM_RETRY
 
 #if CONFIG_ESP_WPA3_SAE_PWE_HUNT_AND_PECK
