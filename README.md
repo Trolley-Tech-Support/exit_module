@@ -38,9 +38,11 @@ The system architecture ensures efficient data flow and secure transactions, enh
 
 ![image](https://github.com/Trolley-Tech-Support/smart_trolley/assets/22334352/d24b6276-25cd-4ea7-97ac-d7df9dd25b00)
 
+
 ### Exit Module Repo
 
 ![image](https://github.com/Trolley-Tech-Support/exit_module/assets/22334352/dfacf9fc-e13c-46f1-aa82-9469a3f52396)
+
 
 ### Contribution Guidelines
 We welcome contributions from the developer community to improve and enhance the functionality of the smart trolley system.
@@ -53,6 +55,7 @@ We acknowledge the research studies referenced in this project for their insight
 
 ### License
 This project is licensed under the MIT License. Feel free to use, modify, and distribute the code for both commercial and non-commercial purposes.
+
 
 
 ![remove](https://github.com/Trolley-Tech-Support/smart_trolley/assets/22334352/030b76ef-7368-4399-b296-0e9fb2d3ea2f) ![cc](https://github.com/Trolley-Tech-Support/smart_trolley/assets/22334352/18efe469-b58b-4951-99a8-bb8dd845e802) ![retry](https://github.com/Trolley-Tech-Support/smart_trolley/assets/22334352/a78b5bf3-2c9a-496e-8f48-86162f55a3b7) ![add_item (1)](https://github.com/Trolley-Tech-Support/smart_trolley/assets/22334352/cd781a70-2497-48b3-8550-e0fac8f32f65)
