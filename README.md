@@ -40,8 +40,7 @@ The system architecture ensures efficient data flow and secure transactions, enh
 
 ### Exit Module Repo
 
-![image](https://github.com/Trolley-Tech-Support/exit_module/assets/22334352/a407ddf9-d990-4975-b5b9-176bb991cc5e)
-
+![image](https://github.com/Trolley-Tech-Support/exit_module/assets/22334352/dfacf9fc-e13c-46f1-aa82-9469a3f52396)
 
 ### Contribution Guidelines
 We welcome contributions from the developer community to improve and enhance the functionality of the smart trolley system.
