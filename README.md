@@ -1,5 +1,7 @@
 # Smart Trolley with ESP32 and Automatic Payment
 
+Open Source Contribution by this Project - espressif/esp-dev-kits#90
+
 <img width="691" alt="Screenshot 2024-03-06 173141" src="https://github.com/Trolley-Tech-Support/smart_trolley/assets/22334352/979d04dc-1910-4649-b0fc-6a81b47fd7db">
 
 ### Introduction
